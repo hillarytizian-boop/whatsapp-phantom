@@ -1,0 +1,41 @@
+# ─── WhatsApp Phantom .gitignore ───
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Generated engine files
+core/engine.js
+!core/engine.js.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Termux specific
+storage/
+.bash_history
+.zsh_history
+
+# Temp
+tmp/
+temp/
+*.tmp
