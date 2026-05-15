@@ -1,0 +1,48 @@
+const chalk = require('chalk');
+
+function showBanner() {
+  const banner = `
+${chalk.red('╔═══════════════════════════════════════════════════════════╗')}
+${chalk.red('║')}                                                        ${chalk.red('║')}
+${chalk.red('║')}     ${chalk.white.bold('██╗    ██╗██╗  ██╗ █████╗ ████████╗███████╗ █████╗ ██████╗ ██╗  ██╗')}     ${chalk.red('║')}
+${chalk.red('║')}     ${chalk.white.bold('██║    ██║██║  ██║██╔══██╗╚══██╔══╝██╔════╝██╔══██╗██╔══██╗██║  ██║')}     ${chalk.red('║')}
+${chalk.red('║')}     ${chalk.white.bold('██║ █╗ ██║███████║███████║   ██║   █████╗  ███████║██████╔╝███████║')}     ${chalk.red('║')}
+${chalk.red('║')}     ${chalk.white.bold('██║███╗██║██╔══██║██╔══██║   ██║   ██╔══╝  ██╔══██║██╔═══╝ ██╔══██║')}     ${chalk.red('║')}
+${chalk.red('║')}     ${chalk.white.bold('╚███╔███╔╝██║  ██║██║  ██║   ██║   ██║     ██║  ██║██║     ██║  ██║')}     ${chalk.red('║')}
+${chalk.red('║')}     ${chalk.white.bold(' ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝')}     ${chalk.red('║')}
+${chalk.red('║')}                                                        ${chalk.red('║')}
+${chalk.red('║')}     ${chalk.cyan('██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗')}           ${chalk.red('║')}
+${chalk.red('║')}     ${chalk.cyan('██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║')}           ${chalk.red('║')}
+${chalk.red('║')}     ${chalk.cyan('██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║')}           ${chalk.red('║')}
+${chalk.red('║')}     ${chalk.cyan('██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║')}           ${chalk.red('║')}
+${chalk.red('║')}     ${chalk.cyan('██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║')}           ${chalk.red('║')}
+${chalk.red('║')}     ${chalk.cyan('╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝')}           ${chalk.red('║')}
+${chalk.red('║')}                                                        ${chalk.red('║')}
+${chalk.red('║')}     ${chalk.yellow.bold('              Multi-Vector Enforcement Engine v2.0.0')}              ${chalk.red('║')}
+${chalk.red('║')}     ${chalk.green.bold('                     By Hillary Tizian')}                              ${chalk.red('║')}
+${chalk.red('║')}                                                        ${chalk.red('║')}
+${chalk.red('╚═══════════════════════════════════════════════════════════╝')}
+${chalk.gray('─────────────────────────────────────────────────────────────────────────')}
+${chalk.white(' [!] Authorized penetration testing use only')}
+${chalk.white(' [!] Target must have given explicit written permission')}
+${chalk.gray('─────────────────────────────────────────────────────────────────────────')}
+  `;
+  console.log(banner);
+}
+
+function showStatus(message, type = 'info') {
+  const icons = {
+    info: chalk.blue('[i]'),
+    ok: chalk.green('[✓]'),
+    warn: chalk.yellow('[!]'),
+    error: chalk.red('[✗]'),
+    target: chalk.magenta('[→]'),
+    ban: chalk.red.bold('[BAN]'),
+    attack: chalk.red('[⚡]')
+  };
+  const icon = icons[type] || icons.info;
+  const timestamp = new Date().toLocaleTimeString();
+  console.log(`${chalk.gray(`[${timestamp}]`)} ${icon} ${message}`);
+}
+
+module.exports = { showBanner, showStatus };

